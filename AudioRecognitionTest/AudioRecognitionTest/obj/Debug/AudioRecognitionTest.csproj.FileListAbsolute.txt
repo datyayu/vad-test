@@ -1,0 +1,16 @@
+c:\users\jaime\documents\visual studio 2015\Projects\AudioRecognitionTest\AudioRecognitionTest\bin\Debug\AudioRecognitionTest.exe.config
+c:\users\jaime\documents\visual studio 2015\Projects\AudioRecognitionTest\AudioRecognitionTest\bin\Debug\AudioRecognitionTest.exe
+c:\users\jaime\documents\visual studio 2015\Projects\AudioRecognitionTest\AudioRecognitionTest\bin\Debug\AudioRecognitionTest.pdb
+c:\users\jaime\documents\visual studio 2015\Projects\AudioRecognitionTest\AudioRecognitionTest\obj\Debug\AudioRecognitionTest.csprojResolveAssemblyReference.cache
+c:\users\jaime\documents\visual studio 2015\Projects\AudioRecognitionTest\AudioRecognitionTest\obj\Debug\MainWindow.g.cs
+c:\users\jaime\documents\visual studio 2015\Projects\AudioRecognitionTest\AudioRecognitionTest\obj\Debug\App.g.cs
+c:\users\jaime\documents\visual studio 2015\Projects\AudioRecognitionTest\AudioRecognitionTest\obj\Debug\AudioRecognitionTest_MarkupCompile.cache
+c:\users\jaime\documents\visual studio 2015\Projects\AudioRecognitionTest\AudioRecognitionTest\obj\Debug\AudioRecognitionTest_MarkupCompile.lref
+c:\users\jaime\documents\visual studio 2015\Projects\AudioRecognitionTest\AudioRecognitionTest\obj\Debug\MainWindow.baml
+c:\users\jaime\documents\visual studio 2015\Projects\AudioRecognitionTest\AudioRecognitionTest\obj\Debug\AudioRecognitionTest.g.resources
+c:\users\jaime\documents\visual studio 2015\Projects\AudioRecognitionTest\AudioRecognitionTest\obj\Debug\AudioRecognitionTest.Properties.Resources.resources
+c:\users\jaime\documents\visual studio 2015\Projects\AudioRecognitionTest\AudioRecognitionTest\obj\Debug\AudioRecognitionTest.csproj.GenerateResource.Cache
+c:\users\jaime\documents\visual studio 2015\Projects\AudioRecognitionTest\AudioRecognitionTest\obj\Debug\AudioRecognitionTest.exe
+c:\users\jaime\documents\visual studio 2015\Projects\AudioRecognitionTest\AudioRecognitionTest\obj\Debug\AudioRecognitionTest.pdb
+c:\users\jaime\documents\visual studio 2015\Projects\AudioRecognitionTest\AudioRecognitionTest\bin\Debug\NAudio.dll
+c:\users\jaime\documents\visual studio 2015\Projects\AudioRecognitionTest\AudioRecognitionTest\bin\Debug\NAudio.xml
