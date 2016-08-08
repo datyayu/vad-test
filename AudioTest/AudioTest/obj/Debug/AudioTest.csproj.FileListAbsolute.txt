@@ -9,3 +9,4 @@ c:\users\jaime\documents\visual studio 2015\Projects\AudioTest\AudioTest\obj\Deb
 C:\Users\Jaime\Documents\VAD\AudioTest\AudioTest\bin\Debug\AudioTest.exe.config
 C:\Users\Jaime\Documents\VAD\AudioTest\AudioTest\obj\Debug\AudioTest.exe
 C:\Users\Jaime\Documents\VAD\AudioTest\AudioTest\obj\Debug\AudioTest.pdb
+C:\Users\arturocoronel\Source\Repos\vad-test\AudioTest\AudioTest\bin\Debug\AudioTest.exe.config
