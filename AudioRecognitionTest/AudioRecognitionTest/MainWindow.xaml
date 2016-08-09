@@ -32,6 +32,5 @@
                 Background="AliceBlue"
                 Click="StopButton_Click"
                 />
-
     </Grid>
 </Window>

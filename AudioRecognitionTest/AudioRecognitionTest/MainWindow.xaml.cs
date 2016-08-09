@@ -18,7 +18,7 @@ namespace AudioRecognitionTest
 {
     public partial class MainWindow : Window
     {
-       private AudioRecognitionViewModel audioRecognitionViewModel;
+       public AudioRecognitionViewModel audioRecognitionViewModel;
 
         public MainWindow()
         {

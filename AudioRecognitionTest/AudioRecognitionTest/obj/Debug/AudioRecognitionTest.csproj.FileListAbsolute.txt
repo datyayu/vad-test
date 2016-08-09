@@ -14,3 +14,18 @@ c:\users\jaime\documents\visual studio 2015\Projects\AudioRecognitionTest\AudioR
 c:\users\jaime\documents\visual studio 2015\Projects\AudioRecognitionTest\AudioRecognitionTest\obj\Debug\AudioRecognitionTest.pdb
 c:\users\jaime\documents\visual studio 2015\Projects\AudioRecognitionTest\AudioRecognitionTest\bin\Debug\NAudio.dll
 c:\users\jaime\documents\visual studio 2015\Projects\AudioRecognitionTest\AudioRecognitionTest\bin\Debug\NAudio.xml
+C:\Users\arturocoronel\Source\Repos\vad-test\AudioRecognitionTest\AudioRecognitionTest\bin\Debug\AudioRecognitionTest.exe.config
+C:\Users\arturocoronel\Source\Repos\vad-test\AudioRecognitionTest\AudioRecognitionTest\bin\Debug\AudioRecognitionTest.exe
+C:\Users\arturocoronel\Source\Repos\vad-test\AudioRecognitionTest\AudioRecognitionTest\bin\Debug\AudioRecognitionTest.pdb
+C:\Users\arturocoronel\Source\Repos\vad-test\AudioRecognitionTest\AudioRecognitionTest\bin\Debug\NAudio.dll
+C:\Users\arturocoronel\Source\Repos\vad-test\AudioRecognitionTest\AudioRecognitionTest\obj\Debug\AudioRecognitionTest.csprojResolveAssemblyReference.cache
+C:\Users\arturocoronel\Source\Repos\vad-test\AudioRecognitionTest\AudioRecognitionTest\obj\Debug\MainWindow.g.cs
+C:\Users\arturocoronel\Source\Repos\vad-test\AudioRecognitionTest\AudioRecognitionTest\obj\Debug\App.g.cs
+C:\Users\arturocoronel\Source\Repos\vad-test\AudioRecognitionTest\AudioRecognitionTest\obj\Debug\AudioRecognitionTest_MarkupCompile.cache
+C:\Users\arturocoronel\Source\Repos\vad-test\AudioRecognitionTest\AudioRecognitionTest\obj\Debug\AudioRecognitionTest_MarkupCompile.lref
+C:\Users\arturocoronel\Source\Repos\vad-test\AudioRecognitionTest\AudioRecognitionTest\obj\Debug\MainWindow.baml
+C:\Users\arturocoronel\Source\Repos\vad-test\AudioRecognitionTest\AudioRecognitionTest\obj\Debug\AudioRecognitionTest.g.resources
+C:\Users\arturocoronel\Source\Repos\vad-test\AudioRecognitionTest\AudioRecognitionTest\obj\Debug\AudioRecognitionTest.Properties.Resources.resources
+C:\Users\arturocoronel\Source\Repos\vad-test\AudioRecognitionTest\AudioRecognitionTest\obj\Debug\AudioRecognitionTest.csproj.GenerateResource.Cache
+C:\Users\arturocoronel\Source\Repos\vad-test\AudioRecognitionTest\AudioRecognitionTest\obj\Debug\AudioRecognitionTest.exe
+C:\Users\arturocoronel\Source\Repos\vad-test\AudioRecognitionTest\AudioRecognitionTest\obj\Debug\AudioRecognitionTest.pdb
