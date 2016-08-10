@@ -32,5 +32,37 @@
                 Background="AliceBlue"
                 Click="StopButton_Click"
                 />
+
+        <Label Grid.Column="0"
+               Grid.Row="1"
+               HorizontalAlignment="Center"
+               VerticalAlignment="Center"
+               Content="Voice Detected:"
+               />
+
+        <Label Grid.Column="1"
+               Grid.Row="1"
+               HorizontalAlignment="Center"
+               FontSize="20"
+               VerticalAlignment="Center"
+               Content="{Binding audioRecognition.VadDetected, UpdateSourceTrigger=PropertyChanged}"
+               />
+
+
+        <Label Grid.Column="0"
+               Grid.Row="2"
+               HorizontalAlignment="Center"
+               VerticalAlignment="Center"
+               Content="Threshold:"
+               />
+
+        <Label Grid.Column="1"
+               Grid.Row="2"
+               HorizontalAlignment="Center"
+               FontSize="20"
+               VerticalAlignment="Center"
+               Content="{Binding audioRecognition.ThresholdDetected, UpdateSourceTrigger=PropertyChanged}"
+               />
+
     </Grid>
 </Window>

@@ -1,4 +1,5 @@
-﻿using AudioRecognitionTest.Helpers;
+﻿using AudioRecognitionTest.Commons;
+using AudioRecognitionTest.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,9 +8,9 @@ using System.Threading.Tasks;
 
 namespace AudioRecognitionTest.ViewModels
 {
-    public class AudioRecognitionViewModel
+    public class AudioRecognitionViewModel 
     {
-        public AudioRecognition audioRecognition;
+        public AudioRecognition audioRecognition { get; set; }
 
         public AudioRecognitionViewModel()
         {

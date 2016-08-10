@@ -1,4 +1,5 @@
-﻿using NAudio.Wave;
+﻿using AudioRecognitionTest.Commons;
+using NAudio.Wave;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -9,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace AudioRecognitionTest.Helpers
 {
-    public class AudioRecognition
+    public class AudioRecognition : ObservableBase
     {
 
         private int sampleRate;
@@ -29,6 +30,7 @@ namespace AudioRecognitionTest.Helpers
             this.channels = channels;
             frameStack = new Collection<float[]>();
             latestDetectionResults = new Collection<bool>();
+            VadDetected = "ALGO";
         }
 
 
@@ -102,16 +104,24 @@ namespace AudioRecognitionTest.Helpers
                     //add this frame to the frameStack
                     frameStack.Add(audioDataFrame_32);
 
+
+                    float threshold = 0;
                     // Update threshold
-                    var frameEnergies = frameStack
+                    if ( frameStack.Count >= FRAMES_PER_COMPARISON)
+                    {
+                        var frameEnergies = frameStack
                             .Take(FRAMES_PER_COMPARISON)
                             .Select(frame => getFrameEnergy(frame, SAMPLES_PER_FRAME_8K))
                             .ToArray();
 
-                    var threshold = calculateThreshold(frameEnergies);
+                        threshold = calculateThreshold(frameEnergies);
 
-                    // Check current frame for Voice Activity.
-                    latestDetectionResults.Add(checkForVoiceActivity(audioDataFrame_32, threshold, SAMPLES_PER_FRAME_8K));
+                        //
+                        ThresholdDetected = threshold.ToString();
+                        // Check current frame for Voice Activity.
+                        latestDetectionResults.Add(checkForVoiceActivity(audioDataFrame_32, threshold, SAMPLES_PER_FRAME_8K));
+                    }
+
 
                     // Clean up.
                     if (frameStack.Count > FRAMES_PER_COMPARISON)
@@ -125,14 +135,18 @@ namespace AudioRecognitionTest.Helpers
                     }
 
                     // Voice was detected only if all the latest frames had a positive detection.
-                    if (latestDetectionResults.All(result => result))
+                    if (frameStack.Count >= FRAMES_PER_COMPARISON && latestDetectionResults.All(result => result))
                     {
-                        Console.WriteLine($"VOICE DETECTED => {index} w Threshold {threshold}");
+                        //Console.WriteLine($"VOICE DETECTED => {index} w Threshold {threshold}");
+                        //Console.WriteLine("Active");
+                        VadDetected = "Yes";
                         voiceIsActive = true;
                     }
                     else
                     {
+                        VadDetected = "No";
                         voiceIsActive = false;
+                        //Console.WriteLine("InActive");
                     }
 
                     //Star filling the next frame
@@ -198,14 +212,44 @@ namespace AudioRecognitionTest.Helpers
             return energyMean;
         }
 
-        private const int K = 2;
+        //sacarla al config
+        private const double K = 1.1;
         private bool checkForVoiceActivity(float[] frame, float threshold, int sampleCount)
         {
             var frameEnergy = getFrameEnergy(frame, sampleCount);
             var voiceActivityFound = frameEnergy > K * threshold;
-
-
             return voiceActivityFound;
         }
+
+        private string vadDetected { get; set; }
+        public string VadDetected
+        {
+            get
+            {
+                return vadDetected;
+            }
+            set
+            {
+                vadDetected = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private string thresholdDetected { get; set; }
+        public string ThresholdDetected
+        {
+            get
+            {
+                return thresholdDetected;
+            }
+            set
+            {
+                thresholdDetected = value;
+                OnPropertyChanged();
+            }
+        }
+
+
+
     }
 }
