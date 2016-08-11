@@ -23,28 +23,24 @@ namespace AudioRecognitionTest.Helpers
             this.lowCutOffFreq = lowCutOffFreq;
             this.topCutOffFreq = topCutOffFreq;
             this.channels = channels;
-            filter_LowPass();
-            filter_HighPass();
+            Filter_LowPass();
+            Filter_HighPass();
         }
 
-        private void filter_LowPass()
+        private void Filter_LowPass()
         {
 
             for (int n = 0; n < channels; n++)
                 if (lowFilter[n] == null)
                     lowFilter[n] = BiQuadFilter.LowPassFilter(44100, lowCutOffFreq, 1);
-                else
-                    lowFilter[n].SetLowPassFilter(44100, lowCutOffFreq, 1);
         }
 
-        private void filter_HighPass()
+        private void Filter_HighPass()
         {
 
             for (int n = 0; n < channels; n++)
                 if (highFilter[n] == null)
                     highFilter[n] = BiQuadFilter.HighPassFilter(44100, topCutOffFreq, 1);
-                else
-                    highFilter[n].SetHighPassFilter(44100, topCutOffFreq, 1);
         }
 
         public int Read(float[] buffer, int offset, int samplesRead)

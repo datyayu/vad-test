@@ -10,7 +10,7 @@ namespace AudioRecognitionTest.Helpers
 {
     public class MyWaveProvider : ISampleProvider
     {
-        private readonly ISampleProvider inWaveProvider;
+        private ISampleProvider inWaveProvider;
         int channels;
         int lowCutOffFreq;
         int topCutOffFreq;
@@ -37,7 +37,7 @@ namespace AudioRecognitionTest.Helpers
             {
                 return inWaveProvider.WaveFormat;
             }
-            private set
+            set
             {
 
             }
@@ -49,8 +49,6 @@ namespace AudioRecognitionTest.Helpers
             for (int n = 0; n < channels; n++)
                 if (lowFilter[n] == null)
                     lowFilter[n] = BiQuadFilter.LowPassFilter(44100, lowCutOffFreq, 1);
-                else
-                    lowFilter[n].SetLowPassFilter(44100, lowCutOffFreq, 1);
         }
 
         private void filter_HighPass()
@@ -59,8 +57,6 @@ namespace AudioRecognitionTest.Helpers
             for (int n = 0; n < channels; n++)
                 if (highFilter[n] == null)
                     highFilter[n] = BiQuadFilter.HighPassFilter(44100, topCutOffFreq, 1);
-                else
-                    highFilter[n].SetHighPassFilter(44100, topCutOffFreq, 1);
         }
 
 
