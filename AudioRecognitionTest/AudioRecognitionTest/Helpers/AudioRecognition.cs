@@ -24,6 +24,8 @@ namespace AudioRecognitionTest.Helpers
         private ICollection<bool> latestDetectionResults;
         private bool voiceIsActive = false;
         private bool thresholdFlag = true;
+        //sacarla al config
+        private const double K = 1.2;
 
         public AudioRecognition(int sampleRate, int channels)
         {
@@ -54,7 +56,10 @@ namespace AudioRecognitionTest.Helpers
                 //WaveIn waveIn = new WaveIn();
                 waveInStream = new WaveInEvent();                         //Por console application en WPF es simplmente WaveIn
                 waveInStream.DeviceNumber = 0;
+                //waveInStream.DeviceNumber = 1;
                 waveInStream.WaveFormat = new WaveFormat(sampleRate, channels);
+                WaveInCapabilities deviceInfo1 = NAudio.Wave.WaveIn.GetCapabilities(0);
+                //WaveInCapabilities deviceInfo2 = NAudio.Wave.WaveIn.GetCapabilities(1);
                 waveInStream.DataAvailable += waveIn_DataAvailable;       //EventHandler it triggers when the dataBuffer gets the AudioSamples from the IO Device (Microphone)
                 
                 /*To not duplicate work*/
@@ -112,76 +117,40 @@ namespace AudioRecognitionTest.Helpers
                     //add this frame to the frameStack
                     frameStack.Add(audioDataFrame_32);
 
-                    // Update threshold
                     if ( frameStack.Count >= FRAMES_PER_COMPARISON)
                     {
-                        
                         if (thresholdFlag)
                         {
-                            var frameEnergies = frameStack
-                               .Take(FRAMES_PER_COMPARISON)
-                               .Select(frame => getFrameEnergy(frame, SAMPLES_PER_FRAME_8K))
-                               .ToArray();
-
-                            threshold = calculateThreshold(frameEnergies);
+                            threshold = calculateThreshold(getCurrentFrameStackEnergy());
+                            ThresholdDetected = threshold.ToString();
                             thresholdFlag = false;
                         }
-                        
-                        //print the value into the WPF app
-                        // Check current frame for Voice Activity.
-
-                        //new formula for New Threshold
-                        bool isFrameActive = checkForVoiceActivity(audioDataFrame_32, threshold, SAMPLES_PER_FRAME_8K);
-                        if (!(isFrameActive))
+                        else
                         {
-                            if (!(silenceStack.Count >= 100))
-                            {
-                                silenceStack.Add(audioDataFrame_32);
-                            }
-                            else
-                            {
-                                var frameEnergies = frameStack
-                               .Take(FRAMES_PER_COMPARISON)
-                               .Select(frame => getFrameEnergy(frame, SAMPLES_PER_FRAME_8K))
-                               .ToArray();
+                            // Check current frame for Voice Activity.
+                            bool isFrameActive = checkForVoiceActivity(audioDataFrame_32, threshold, SAMPLES_PER_FRAME_8K);
+                            //Add the result no matter if it was true or false
+                            latestDetectionResults.Add(isFrameActive);
 
-                                eSilence = calculateThreshold(frameEnergies);
-                                threshold = updateThreshold(threshold, eSilence);
+                            //chech the frame to see if we want to update the Threshold 
+                            if (!(isFrameActive))
+                            {
+                                if (!(silenceStack.Count >= 10))
+                                {
+                                    silenceStack.Add(audioDataFrame_32);
+                                }
+                                else
+                                {
+                                    eSilence = calculateThreshold(getCurrentFrameStackEnergy());
+                                    threshold = updateThreshold(threshold, eSilence);
+                                    ThresholdDetected = threshold.ToString();
+                                    silenceStack.Clear();
+                                }
                             }
                         }
-                        //if (!thresholdFlag)
-                            //threshold = updateThreshold(threshold, eSilence);
-
-                        latestDetectionResults.Add(isFrameActive);
-                        ThresholdDetected = threshold.ToString();
-                    }
-
-                    /*remove the 1st and put the newest one*/
-                    if (frameStack.Count > FRAMES_PER_COMPARISON)
-                    {
-                        frameStack.Remove(frameStack.First());
-                    }
-
-                    if (silenceStack.Count > FRAMES_PER_COMPARISON)
-                    {
-                        silenceStack.Remove(frameStack.First());
-                    }
-
-                    if (latestDetectionResults.Count > MIN_FRAMES_FOR_VERIFICATION)
-                    {
-                        latestDetectionResults.Remove(latestDetectionResults.First());
-                    }
-
-                    // Voice was detected only if all the latest frames had a positive detection.
-                    if (frameStack.Count >= FRAMES_PER_COMPARISON && latestDetectionResults.All(result => result))
-                    {
-                        VadDetected = "Yes";
-                        voiceIsActive = true;
-                    }
-                    else
-                    {
-                        VadDetected = "No";
-                        voiceIsActive = false;
+                        updateStacks();
+                        confirmVoiceActivity(audioDataFrame_32);
+                        
                     }
                     audioDataFrame_16[i % SAMPLES_PER_FRAME_8K] = sample_16;
                     audioDataFrame_32[i % SAMPLES_PER_FRAME_8K] = sample_32;
@@ -195,10 +164,54 @@ namespace AudioRecognitionTest.Helpers
             }
         }
 
-        private const double P  = 0.9;
+        private void confirmVoiceActivity(float[] audioDataFrame_32)
+        {
+            // Voice was detected only if all the latest frames had a positive detection.
+            if (frameStack.Count >= FRAMES_PER_COMPARISON && latestDetectionResults.Take(5).All(result => result))
+            {
+                VadDetected = "Yes";
+                voiceIsActive = true;
+                silenceStack.Clear();
+            }
+            else
+            {
+                VadDetected = "No";
+                if (voiceIsActive)
+                {
+                    if (frameStack.Count >= 5)
+                    {
+                        eSilence = getFrameEnergy(audioDataFrame_32, SAMPLES_PER_FRAME_8K);
+                        threshold = updateThreshold(threshold, eSilence);
+                        ThresholdDetected = threshold.ToString();
+                        voiceIsActive = false;
+                    }
+                }
+            }
+        }
+
+        private void updateStacks()
+        {
+            if (frameStack.Count > FRAMES_PER_COMPARISON)
+            {
+                frameStack.Remove(frameStack.First());
+            }
+
+            if (latestDetectionResults.Count > (MIN_FRAMES_FOR_VERIFICATION))
+            {
+                latestDetectionResults.Remove(latestDetectionResults.First());
+            }
+        }
+
+        private double[] getCurrentFrameStackEnergy()
+        {
+            return (frameStack.Take(FRAMES_PER_COMPARISON)
+                    .Select(frame => getFrameEnergy(frame, SAMPLES_PER_FRAME_8K))
+                    .ToArray());
+        }
+
+        private const double P  = 0.5;
         private double updateThreshold(double threshold, double eSilence)
         {
-            //return ((threshold + (eSilence + threshold / 2) / 2);
             return (((((double)1 - P) * threshold) + (P * eSilence)));
         }
 
@@ -242,19 +255,15 @@ namespace AudioRecognitionTest.Helpers
             double framesEnergySum = 0;
             for (int i = 1; i < framesEnergy.Length; i++)
             {
-                //????
-                //framesEnergySum += framesEnergy.Take(i).Average();
                 framesEnergySum += framesEnergy[i];
             }
             return (framesEnergySum / framesEnergy.Length);
         }
 
-        //sacarla al config
-        private const double K = 1;
         private bool checkForVoiceActivity(float[] frame, double threshold, int sampleCount)
         {
-            var frameEnergy = getFrameEnergy(frame, sampleCount);
-            var voiceActivityFound = frameEnergy > K * threshold;
+            double frameEnergy = getFrameEnergy(frame, sampleCount);
+            bool voiceActivityFound = frameEnergy > K * threshold;
             return voiceActivityFound;
         }
 
