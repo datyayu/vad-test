@@ -24,8 +24,9 @@ namespace AudioRecognitionTest.Helpers
         private ICollection<bool> latestDetectionResults;
         private bool voiceIsActive = false;
         private bool thresholdFlag = true;
+        private bool test = true;
         //sacarla al config
-        private const double K = 1.2;
+        private const double K = 1;
 
         public AudioRecognition(int sampleRate, int channels)
         {
@@ -93,7 +94,7 @@ namespace AudioRecognitionTest.Helpers
         private const int FRAMES_PER_EVENT_8K = 50;
         private const int FRAMES_PER_EVENT_16K = 100;
 
-        private const int FRAMES_PER_COMPARISON = 100;
+        private const int FRAMES_PER_COMPARISON = 50;
         private const int MIN_FRAMES_FOR_VERIFICATION = 5;
         private double threshold = 0;
         private double eSilence = 0;
@@ -145,6 +146,7 @@ namespace AudioRecognitionTest.Helpers
                                     threshold = updateThreshold(threshold, eSilence);
                                     ThresholdDetected = threshold.ToString();
                                     silenceStack.Clear();
+                                    test = false;
                                 }
                             }
                         }
@@ -171,14 +173,14 @@ namespace AudioRecognitionTest.Helpers
             {
                 VadDetected = "Yes";
                 voiceIsActive = true;
-                silenceStack.Clear();
+                test = false;
             }
             else
             {
                 VadDetected = "No";
                 if (voiceIsActive)
                 {
-                    if (frameStack.Count >= 5)
+                    if (silenceStack.Count >= 5)
                     {
                         eSilence = getFrameEnergy(audioDataFrame_32, SAMPLES_PER_FRAME_8K);
                         threshold = updateThreshold(threshold, eSilence);
@@ -188,6 +190,7 @@ namespace AudioRecognitionTest.Helpers
                 }
             }
         }
+
 
         private void updateStacks()
         {
