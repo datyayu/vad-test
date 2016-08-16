@@ -132,15 +132,15 @@ namespace AudioRecognitionTest.Helpers
                         {
                             VadDetected = "Yes";
                             //Newest Noise Frame es cualquier Frame ?
-                            if (silenceEnergyStack.Count >= M)
-                                updateThreshold(newNoiseEnergy, getFrameEnergy(audioDataFrame_32, SAMPLES_PER_FRAME_8K));
+                            //if (silenceEnergyStack.Count >= M)
+                              //  updateThreshold(newNoiseEnergy, getFrameEnergy(audioDataFrame_32, SAMPLES_PER_FRAME_8K));
                         }
                         else
                         {
-                            /*if (checkInactiveFrameForZeroCross(audioDataFrame_32, SAMPLES_PER_FRAME_8K) && silenceEnergyStack.Count >= M)
+                            if (checkInactiveFrameForZeroCross(audioDataFrame_32, SAMPLES_PER_FRAME_8K) && silenceEnergyStack.Count >= M)
                                 VadDetected = "Yes";
                             else
-                            {*/
+                            {
                                 VadDetected = "No";
                                 if (silenceEnergyStack.Count >= M)
                                 {
@@ -153,7 +153,7 @@ namespace AudioRecognitionTest.Helpers
                                 }
                                 else
                                     silenceEnergyStack.Add(getFrameEnergy(audioDataFrame_32, SAMPLES_PER_FRAME_8K));
-                            //}
+                            }
                             
                         }
                         
@@ -172,15 +172,20 @@ namespace AudioRecognitionTest.Helpers
         public bool checkInactiveFrameForZeroCross(float[] audioDataFrame_32, int SAMPLES_PER_FRAME_8K)
         {
             int numberOfZeroCrossings = 0;
-            for (int i=0; i< (SAMPLES_PER_FRAME_8K-1); i++)
+
+            for (int i = 0; i < (SAMPLES_PER_FRAME_8K); i += 2)
             {
                 if ((audioDataFrame_32[i] * audioDataFrame_32[i + 1]) < 0)
                     numberOfZeroCrossings++;
+
+                if((i + 2) % (SAMPLES_PER_FRAME_8K / 2) == 0 && i != 0)
+                {
+                    if (numberOfZeroCrossings < 5 || numberOfZeroCrossings > 15)
+                        return (false);
+                    numberOfZeroCrossings = 0;
+                }
             }
-            if (numberOfZeroCrossings >= 5 && numberOfZeroCrossings <= 15)
-                return (true);
-            else
-                return (false);
+            return (true);
         }
 
         private void updatePValue()
@@ -201,7 +206,7 @@ namespace AudioRecognitionTest.Helpers
             oldVariance = getVariance(silenceEnergyStack.ToArray());
             silenceEnergyStack.Remove(silenceEnergyStack.First());
             silenceEnergyStack.Add(getFrameEnergy(audioDataFrame_32, SAMPLES_PER_FRAME_8K));
-            oldVariance = getVariance(silenceEnergyStack.ToArray());
+            newVariance = getVariance(silenceEnergyStack.ToArray());
         }
 
         private double getVariance(double[] data)
