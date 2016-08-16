@@ -20,13 +20,13 @@ namespace AudioRecognitionTest.Helpers
         private WaveInEvent waveInStream;
         private MyFilterProvider filter;
         private ICollection<float[]> frameStack;
-        private ICollection<float[]> silenceStack;
+        private ICollection<double> silenceEnergyStack;
         private ICollection<bool> latestDetectionResults;
         private bool voiceIsActive = false;
         private bool thresholdFlag = true;
-        private bool test = true;
+
         //sacarla al config
-        private const double K = 1;
+        private const double K = 2.0;
 
         public AudioRecognition(int sampleRate, int channels)
         {
@@ -34,7 +34,7 @@ namespace AudioRecognitionTest.Helpers
             this.sampleRate = sampleRate;
             this.channels = channels;
             frameStack = new Collection<float[]>();
-            silenceStack = new Collection<float[]>();
+            silenceEnergyStack = new Collection<double>();
             latestDetectionResults = new Collection<bool>();
         }
 
@@ -94,11 +94,17 @@ namespace AudioRecognitionTest.Helpers
         private const int FRAMES_PER_EVENT_8K = 50;
         private const int FRAMES_PER_EVENT_16K = 100;
 
-        private const int FRAMES_PER_COMPARISON = 50;
+        private const int FRAMES_PER_COMPARISON = 10;
         private const int MIN_FRAMES_FOR_VERIFICATION = 5;
         private double threshold = 0;
         private double eSilence = 0;
+        private double oldNoiseEnergy = 0;
+        private double newNoiseEnergy = 0;
+        private double P = 0;                     //P ya no es una constante
 
+        private const int M = 10;
+        private double oldVariance = 0;
+        private double newVariance = 0;
 
         private void waveIn_DataAvailable(object sender, WaveInEventArgs e)
         {
@@ -111,99 +117,117 @@ namespace AudioRecognitionTest.Helpers
                 short sample_16 = (short)((e.Buffer[index + 1] << 8) | e.Buffer[index + 0]);
                 float sample_32 = sample_16 / 32768f;
 
-                if ((index % (BYTES_PER_FRAME_8K)) == 0 && index > 0)
-                {
-                    //FRAME READY
-                    noiseReduction(audioDataFrame_32, 0, SAMPLES_PER_FRAME_8K);
-                    //add this frame to the frameStack
-                    frameStack.Add(audioDataFrame_32);
+                audioDataFrame_32[i % SAMPLES_PER_FRAME_8K] = sample_32;
+                i++;
 
-                    if ( frameStack.Count >= FRAMES_PER_COMPARISON)
+                if ((i % (SAMPLES_PER_FRAME_8K)) == 0 && index > 0) //FRAME READY?
+                {
+                    noiseReduction(audioDataFrame_32, 0, SAMPLES_PER_FRAME_8K);
+
+                    if (!thresholdFlag)
                     {
-                        if (thresholdFlag)
+                        // Check current frame for Voice Activity.
+                        bool isFrameActive = checkForVoiceActivity(audioDataFrame_32, newNoiseEnergy, SAMPLES_PER_FRAME_8K);
+                        if (isFrameActive)
                         {
-                            threshold = calculateThreshold(getCurrentFrameStackEnergy());
-                            ThresholdDetected = threshold.ToString();
-                            thresholdFlag = false;
+                            VadDetected = "Yes";
+                            //Newest Noise Frame es cualquier Frame ?
+                            if (silenceEnergyStack.Count >= M)
+                                updateThreshold(newNoiseEnergy, getFrameEnergy(audioDataFrame_32, SAMPLES_PER_FRAME_8K));
                         }
                         else
                         {
-                            // Check current frame for Voice Activity.
-                            bool isFrameActive = checkForVoiceActivity(audioDataFrame_32, threshold, SAMPLES_PER_FRAME_8K);
-                            //Add the result no matter if it was true or false
-                            latestDetectionResults.Add(isFrameActive);
-
-                            //chech the frame to see if we want to update the Threshold 
-                            if (!(isFrameActive))
-                            {
-                                if (!(silenceStack.Count >= 10))
+                            /*if (checkInactiveFrameForZeroCross(audioDataFrame_32, SAMPLES_PER_FRAME_8K) && silenceEnergyStack.Count >= M)
+                                VadDetected = "Yes";
+                            else
+                            {*/
+                                VadDetected = "No";
+                                if (silenceEnergyStack.Count >= M)
                                 {
-                                    silenceStack.Add(audioDataFrame_32);
+                                    generateSilenceEnergyVariances(audioDataFrame_32);
+                                    // A sudden change in the background noise would mean newVariance > oldVariance
+                                    updatePValue();
+                                    //Newest Noise Frame es cualquier Frame ?
+                                    updateThreshold(newNoiseEnergy, getFrameEnergy(audioDataFrame_32, SAMPLES_PER_FRAME_8K));
+                                    //updateThreshold(newNoiseEnergy, silenceEnergyStack.Last());
                                 }
                                 else
-                                {
-                                    eSilence = calculateThreshold(getCurrentFrameStackEnergy());
-                                    threshold = updateThreshold(threshold, eSilence);
-                                    ThresholdDetected = threshold.ToString();
-                                    silenceStack.Clear();
-                                    test = false;
-                                }
-                            }
+                                    silenceEnergyStack.Add(getFrameEnergy(audioDataFrame_32, SAMPLES_PER_FRAME_8K));
+                            //}
+                            
                         }
-                        updateStacks();
-                        confirmVoiceActivity(audioDataFrame_32);
                         
+                        //computation of new noiseEnergy based in the bool value from the previous check
                     }
-                    audioDataFrame_16[i % SAMPLES_PER_FRAME_8K] = sample_16;
-                    audioDataFrame_32[i % SAMPLES_PER_FRAME_8K] = sample_32;
-                }
-                else
-                {
-                    audioDataFrame_16[i % SAMPLES_PER_FRAME_8K] = sample_16;
-                    audioDataFrame_32[i % SAMPLES_PER_FRAME_8K] = sample_32;
-                }
-                i++;
-            }
-        }
-
-        private void confirmVoiceActivity(float[] audioDataFrame_32)
-        {
-            // Voice was detected only if all the latest frames had a positive detection.
-            if (frameStack.Count >= FRAMES_PER_COMPARISON && latestDetectionResults.Take(5).All(result => result))
-            {
-                VadDetected = "Yes";
-                voiceIsActive = true;
-                test = false;
-            }
-            else
-            {
-                VadDetected = "No";
-                if (voiceIsActive)
-                {
-                    if (silenceStack.Count >= 5)
+                    else
                     {
-                        eSilence = getFrameEnergy(audioDataFrame_32, SAMPLES_PER_FRAME_8K);
-                        threshold = updateThreshold(threshold, eSilence);
-                        ThresholdDetected = threshold.ToString();
-                        voiceIsActive = false;
+                        frameStack.Add(audioDataFrame_32);
+                        if (frameStack.Count >= FRAMES_PER_COMPARISON)
+                            setInitalNoiseEnergy(audioDataFrame_32);
                     }
                 }
             }
         }
 
-
-        private void updateStacks()
+        public bool checkInactiveFrameForZeroCross(float[] audioDataFrame_32, int SAMPLES_PER_FRAME_8K)
         {
-            if (frameStack.Count > FRAMES_PER_COMPARISON)
+            int numberOfZeroCrossings = 0;
+            for (int i=0; i< (SAMPLES_PER_FRAME_8K-1); i++)
             {
-                frameStack.Remove(frameStack.First());
+                if ((audioDataFrame_32[i] * audioDataFrame_32[i + 1]) < 0)
+                    numberOfZeroCrossings++;
             }
-
-            if (latestDetectionResults.Count > (MIN_FRAMES_FOR_VERIFICATION))
-            {
-                latestDetectionResults.Remove(latestDetectionResults.First());
-            }
+            if (numberOfZeroCrossings >= 5 && numberOfZeroCrossings <= 15)
+                return (true);
+            else
+                return (false);
         }
+
+        private void updatePValue()
+        {
+            double varianceRelationship = (newVariance / oldVariance);
+            if (varianceRelationship >= 1.25)
+                P = 0.25;
+            else if (varianceRelationship >= 1.10 && varianceRelationship <= 1.24)
+                P = 0.20;
+            else if (varianceRelationship >= 1.0 && varianceRelationship <= 1.9)
+                P = 0.15;
+            else
+                P = 0.10;
+        }
+
+        private void generateSilenceEnergyVariances(float[] audioDataFrame_32)
+        {
+            oldVariance = getVariance(silenceEnergyStack.ToArray());
+            silenceEnergyStack.Remove(silenceEnergyStack.First());
+            silenceEnergyStack.Add(getFrameEnergy(audioDataFrame_32, SAMPLES_PER_FRAME_8K));
+            oldVariance = getVariance(silenceEnergyStack.ToArray());
+        }
+
+        private double getVariance(double[] data)
+        {
+            double mean = getMean(data);
+            double temp = 0;
+            foreach (double a in data)
+               temp += (a - mean) * (a - mean);
+            return (temp / data.Length);
+        }
+
+        private double getMean(double[] data)   //la Media
+        {
+            double sum = 0.0;
+            foreach (double a in data)
+                sum += a;
+            return (sum / data.Length);
+        }
+
+        private void setInitalNoiseEnergy(float[] audioDataFrame_32)
+        {
+            newNoiseEnergy = oldNoiseEnergy = calculateInitialNoiseEnergy(getCurrentFrameStackEnergy());
+            ThresholdDetected = oldNoiseEnergy.ToString();
+            thresholdFlag = false;
+        }
+
 
         private double[] getCurrentFrameStackEnergy()
         {
@@ -212,7 +236,6 @@ namespace AudioRecognitionTest.Helpers
                     .ToArray());
         }
 
-        private const double P  = 0.5;
         private double updateThreshold(double threshold, double eSilence)
         {
             return (((((double)1 - P) * threshold) + (P * eSilence)));
@@ -226,16 +249,6 @@ namespace AudioRecognitionTest.Helpers
 
         private double getFrameEnergy(float[] frameSamples, int sampleCount)
         {
-            // Formula original
-            //           jk
-            // E = (1/k) ∑ [x(i)]^2
-            //       i=(j-1)K+ 1
-            //
-            // E => Energia del frame actual
-            // k => cantidad de samples
-            // j => numero de frame
-            // x(i) => nth sample
-
             // Formula modificada (trata los frames de manera individual).
             //           k
             // E = (1/k) ∑ [x(i)]^2
@@ -246,14 +259,12 @@ namespace AudioRecognitionTest.Helpers
 
             for (int i=1; i < sampleCount; i++)
             {
-                EnergySum += Math.Pow(frameSamples[i], 2);
-                //EnergySum += frameSamples[i] * frameSamples[i];
+                EnergySum += Math.Pow(frameSamples[i], 2);                
             }
             return (k * EnergySum);
         } 
 
-
-        private double calculateThreshold(double[] framesEnergy)
+        private double calculateInitialNoiseEnergy(double[] framesEnergy)
         {
             double framesEnergySum = 0;
             for (int i = 1; i < framesEnergy.Length; i++)
@@ -263,11 +274,11 @@ namespace AudioRecognitionTest.Helpers
             return (framesEnergySum / framesEnergy.Length);
         }
 
-        private bool checkForVoiceActivity(float[] frame, double threshold, int sampleCount)
+        private bool checkForVoiceActivity(float[] frame, double newNoiseEnergy, int sampleCount)
         {
             double frameEnergy = getFrameEnergy(frame, sampleCount);
-            bool voiceActivityFound = frameEnergy > K * threshold;
-            return voiceActivityFound;
+            double threshold = (K * newNoiseEnergy);
+            return (frameEnergy > threshold);       //This is a boolean expresion 
         }
 
         private string vadDetected { get; set; }
@@ -297,8 +308,5 @@ namespace AudioRecognitionTest.Helpers
                 OnPropertyChanged();
             }
         }
-
-
-
     }
 }
