@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,15 +16,14 @@ namespace AudioRecognitionTest.Helpers
 
         private int sampleRate;
         private int channels;
-        private WaveIn waveIn;
         private WaveOut waveOut;
         private WaveInEvent waveInStream;
         private MyFilterProvider filter;
         private ICollection<float[]> frameStack;
         private ICollection<double> silenceEnergyStack;
-        private ICollection<bool> latestDetectionResults;
-        private bool voiceIsActive = false;
-        private bool thresholdFlag = true;
+        private bool initialTrainingFlag = true;
+        private ICollection<float> activeStack;
+        private MemoryStream memstream = new MemoryStream();
 
         //sacarla al config
         private const double K = 2.0;
@@ -35,7 +35,7 @@ namespace AudioRecognitionTest.Helpers
             this.channels = channels;
             frameStack = new Collection<float[]>();
             silenceEnergyStack = new Collection<double>();
-            latestDetectionResults = new Collection<bool>();
+            activeStack = new Collection<float>();
         }
 
 
@@ -54,13 +54,10 @@ namespace AudioRecognitionTest.Helpers
             else
             {
                 /*Testing Filter with the build in Microphone (Laptop)*/
-                //WaveIn waveIn = new WaveIn();
-                waveInStream = new WaveInEvent();                         //Por console application en WPF es simplmente WaveIn
+                waveInStream = new WaveInEvent();                       
                 waveInStream.DeviceNumber = 0;
-                //waveInStream.DeviceNumber = 1;
                 waveInStream.WaveFormat = new WaveFormat(sampleRate, channels);
                 WaveInCapabilities deviceInfo1 = NAudio.Wave.WaveIn.GetCapabilities(0);
-                //WaveInCapabilities deviceInfo2 = NAudio.Wave.WaveIn.GetCapabilities(1);
                 waveInStream.DataAvailable += waveIn_DataAvailable;       //EventHandler it triggers when the dataBuffer gets the AudioSamples from the IO Device (Microphone)
                 
                 /*To not duplicate work*/
@@ -79,6 +76,10 @@ namespace AudioRecognitionTest.Helpers
             }
             else
             {
+                WaveFileWriter wfr = new WaveFileWriter(memstream, waveInStream.WaveFormat);
+                wfr.WriteSamples(activeStack.ToArray(), 0, activeStack.Count);
+                wfr.Flush();
+                File.WriteAllBytes("C:\\Users\\Jaime\\Desktop\\superTest.wav", memstream.GetBuffer());
                 waveInStream.StopRecording();
             }
             
@@ -96,13 +97,13 @@ namespace AudioRecognitionTest.Helpers
 
         private const int FRAMES_PER_COMPARISON = 10;
         private const int MIN_FRAMES_FOR_VERIFICATION = 5;
-        private double threshold = 0;
-        private double eSilence = 0;
+
         private double oldNoiseEnergy = 0;
         private double newNoiseEnergy = 0;
-        private double P = 0;                     //P ya no es una constante
+        private double P = 0;                     //P is not a constant anymore
 
-        private const int M = 10;
+        private const int SILENCE_BUFFER_SIZE = 10;
+
         private double oldVariance = 0;
         private double newVariance = 0;
 
@@ -124,52 +125,57 @@ namespace AudioRecognitionTest.Helpers
                 {
                     noiseReduction(audioDataFrame_32, 0, SAMPLES_PER_FRAME_8K);
 
-                    if (!thresholdFlag)
+                    if (!initialTrainingFlag)
                     {
                         // Check current frame for Voice Activity.
                         bool isFrameActive = checkForVoiceActivity(audioDataFrame_32, newNoiseEnergy, SAMPLES_PER_FRAME_8K);
                         if (isFrameActive)
                         {
                             VadDetected = "Yes";
-                            //Newest Noise Frame es cualquier Frame ?
-                            //if (silenceEnergyStack.Count >= M)
-                              //  updateThreshold(newNoiseEnergy, getFrameEnergy(audioDataFrame_32, SAMPLES_PER_FRAME_8K));
+                            addFrameToActiveList(audioDataFrame_32);
                         }
                         else
                         {
-                            if (checkInactiveFrameForZeroCross(audioDataFrame_32, SAMPLES_PER_FRAME_8K) && silenceEnergyStack.Count >= M)
+                            if (checkInactiveFrameZeroCross(audioDataFrame_32, SAMPLES_PER_FRAME_8K) && silenceEnergyStack.Count >= SILENCE_BUFFER_SIZE)
+                            {
                                 VadDetected = "Yes";
+                                addFrameToActiveList(audioDataFrame_32);
+                            }
                             else
                             {
                                 VadDetected = "No";
-                                if (silenceEnergyStack.Count >= M)
+                                if (silenceEnergyStack.Count >= SILENCE_BUFFER_SIZE)
                                 {
                                     generateSilenceEnergyVariances(audioDataFrame_32);
                                     // A sudden change in the background noise would mean newVariance > oldVariance
                                     updatePValue();
-                                    //Newest Noise Frame es cualquier Frame ?
                                     updateThreshold(newNoiseEnergy, getFrameEnergy(audioDataFrame_32, SAMPLES_PER_FRAME_8K));
-                                    //updateThreshold(newNoiseEnergy, silenceEnergyStack.Last());
                                 }
                                 else
                                     silenceEnergyStack.Add(getFrameEnergy(audioDataFrame_32, SAMPLES_PER_FRAME_8K));
                             }
                             
                         }
-                        
-                        //computation of new noiseEnergy based in the bool value from the previous check
                     }
                     else
                     {
                         frameStack.Add(audioDataFrame_32);
                         if (frameStack.Count >= FRAMES_PER_COMPARISON)
-                            setInitalNoiseEnergy(audioDataFrame_32);
+                            setInitialNoiseEnergy(audioDataFrame_32);
                     }
                 }
             }
         }
 
-        public bool checkInactiveFrameForZeroCross(float[] audioDataFrame_32, int SAMPLES_PER_FRAME_8K)
+        private void addFrameToActiveList(float[] audioDataFrame_32)
+        {
+            foreach (float sample in audioDataFrame_32)
+            {
+                activeStack.Add(sample);
+            }
+        }
+
+        public bool checkInactiveFrameZeroCross(float[] audioDataFrame_32, int SAMPLES_PER_FRAME_8K)
         {
             int numberOfZeroCrossings = 0;
 
@@ -226,11 +232,11 @@ namespace AudioRecognitionTest.Helpers
             return (sum / data.Length);
         }
 
-        private void setInitalNoiseEnergy(float[] audioDataFrame_32)
+        private void setInitialNoiseEnergy(float[] audioDataFrame_32)
         {
             newNoiseEnergy = oldNoiseEnergy = calculateInitialNoiseEnergy(getCurrentFrameStackEnergy());
             ThresholdDetected = oldNoiseEnergy.ToString();
-            thresholdFlag = false;
+            initialTrainingFlag = false;
         }
 
 
@@ -283,7 +289,7 @@ namespace AudioRecognitionTest.Helpers
         {
             double frameEnergy = getFrameEnergy(frame, sampleCount);
             double threshold = (K * newNoiseEnergy);
-            return (frameEnergy > threshold);       //This is a boolean expresion 
+            return (frameEnergy > threshold);       
         }
 
         private string vadDetected { get; set; }
